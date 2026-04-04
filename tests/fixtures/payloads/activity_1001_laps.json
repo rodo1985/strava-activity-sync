@@ -1,0 +1,8 @@
+[
+  {"name": "Warmup", "distance": 1000.0, "moving_time": 360, "elapsed_time": 360, "average_speed": 2.8, "average_heartrate": 128.0, "average_cadence": 80.0, "split": false, "pace_zone": 1},
+  {"name": "Work 1", "distance": 1000.0, "moving_time": 240, "elapsed_time": 240, "average_speed": 4.2, "average_heartrate": 164.0, "average_cadence": 88.0, "split": false, "pace_zone": 4},
+  {"name": "Recovery 1", "distance": 600.0, "moving_time": 220, "elapsed_time": 220, "average_speed": 2.7, "average_heartrate": 135.0, "average_cadence": 76.0, "split": false, "pace_zone": 1},
+  {"name": "Work 2", "distance": 1000.0, "moving_time": 238, "elapsed_time": 238, "average_speed": 4.3, "average_heartrate": 168.0, "average_cadence": 89.0, "split": false, "pace_zone": 4},
+  {"name": "Recovery 2", "distance": 600.0, "moving_time": 225, "elapsed_time": 225, "average_speed": 2.6, "average_heartrate": 136.0, "average_cadence": 76.0, "split": false, "pace_zone": 1},
+  {"name": "Work 3", "distance": 1000.0, "moving_time": 236, "elapsed_time": 236, "average_speed": 4.4, "average_heartrate": 170.0, "average_cadence": 90.0, "split": false, "pace_zone": 5}
+]

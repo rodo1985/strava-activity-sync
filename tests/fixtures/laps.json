@@ -1,0 +1,67 @@
+[
+  {
+    "id": 2001,
+    "name": "Warm up",
+    "elapsed_time": 600,
+    "moving_time": 600,
+    "distance": 2000.0,
+    "average_speed": 3.33,
+    "average_heartrate": 138.0,
+    "max_heartrate": 145.0,
+    "average_watts": 180.0,
+    "pace_zone": 1,
+    "split": 1
+  },
+  {
+    "id": 2002,
+    "name": "Interval 1",
+    "elapsed_time": 450,
+    "moving_time": 450,
+    "distance": 1800.0,
+    "average_speed": 4.0,
+    "average_heartrate": 168.0,
+    "max_heartrate": 178.0,
+    "average_watts": 290.0,
+    "pace_zone": 3,
+    "split": 2
+  },
+  {
+    "id": 2003,
+    "name": "Recovery 1",
+    "elapsed_time": 300,
+    "moving_time": 300,
+    "distance": 900.0,
+    "average_speed": 3.0,
+    "average_heartrate": 142.0,
+    "max_heartrate": 148.0,
+    "average_watts": 170.0,
+    "pace_zone": 1,
+    "split": 3
+  },
+  {
+    "id": 2004,
+    "name": "Interval 2",
+    "elapsed_time": 450,
+    "moving_time": 450,
+    "distance": 1750.0,
+    "average_speed": 3.89,
+    "average_heartrate": 170.0,
+    "max_heartrate": 182.0,
+    "average_watts": 295.0,
+    "pace_zone": 3,
+    "split": 4
+  },
+  {
+    "id": 2005,
+    "name": "Cool down",
+    "elapsed_time": 600,
+    "moving_time": 600,
+    "distance": 1900.0,
+    "average_speed": 3.17,
+    "average_heartrate": 140.0,
+    "max_heartrate": 146.0,
+    "average_watts": 175.0,
+    "pace_zone": 1,
+    "split": 5
+  }
+]

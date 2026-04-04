@@ -1,0 +1,9 @@
+{
+  "aspect_type": "delete",
+  "event_time": 1775313720,
+  "object_id": 1001,
+  "object_type": "activity",
+  "owner_id": 424242,
+  "subscription_id": 1,
+  "updates": {}
+}

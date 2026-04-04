@@ -1,0 +1,11 @@
+[
+  {
+    "type": "power",
+    "distribution_buckets": [
+      {"min": 0, "max": 150, "time": 2400, "percent_time": 26.7},
+      {"min": 150, "max": 220, "time": 4200, "percent_time": 46.7},
+      {"min": 220, "max": 280, "time": 1800, "percent_time": 20.0},
+      {"min": 280, "max": 500, "time": 600, "percent_time": 6.6}
+    ]
+  }
+]

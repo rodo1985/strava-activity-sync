@@ -1,0 +1,6 @@
+[
+  {"name": "Lap 1", "distance": 18000.0, "moving_time": 2300, "elapsed_time": 2400, "average_speed": 7.8, "average_heartrate": 138.0, "average_watts": 185.0, "average_cadence": 82.0, "split": false},
+  {"name": "Lap 2", "distance": 18000.0, "moving_time": 2250, "elapsed_time": 2350, "average_speed": 8.0, "average_heartrate": 141.0, "average_watts": 192.0, "average_cadence": 84.0, "split": false},
+  {"name": "Lap 3", "distance": 18000.0, "moving_time": 2200, "elapsed_time": 2300, "average_speed": 8.2, "average_heartrate": 145.0, "average_watts": 200.0, "average_cadence": 85.0, "split": false},
+  {"name": "Lap 4", "distance": 18000.0, "moving_time": 2250, "elapsed_time": 2350, "average_speed": 8.1, "average_heartrate": 144.0, "average_watts": 198.0, "average_cadence": 84.0, "split": false}
+]

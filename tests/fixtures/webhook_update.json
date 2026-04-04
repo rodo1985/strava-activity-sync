@@ -1,0 +1,11 @@
+{
+  "aspect_type": "update",
+  "event_time": 1712213460,
+  "object_id": 12345,
+  "object_type": "activity",
+  "owner_id": 101,
+  "subscription_id": 999,
+  "updates": {
+    "title": "Morning Run Intervals Updated"
+  }
+}

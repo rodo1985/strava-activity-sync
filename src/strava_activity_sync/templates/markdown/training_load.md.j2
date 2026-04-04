@@ -1,0 +1,41 @@
+# Training Load
+
+This report aggregates deterministic load and zone data for planning and review.
+
+## Rolling Windows
+
+- Last 7 days: load {{ context.last_7_days.total_load }}, {{ context.last_7_days.total_distance_km }} km, {{ context.last_7_days.total_moving_time_hours }} h
+- Rolling 28 days: load {{ context.rolling_28_days.total_load }}, {{ context.rolling_28_days.total_distance_km }} km, {{ context.rolling_28_days.total_moving_time_hours }} h
+- Month to date: load {{ context.month_to_date.total_load }}, {{ context.month_to_date.total_distance_km }} km, {{ context.month_to_date.total_moving_time_hours }} h
+- Year to date: load {{ context.year_to_date.total_load }}, {{ context.year_to_date.total_distance_km }} km, {{ context.year_to_date.total_moving_time_hours }} h
+
+## Month-to-Date Breakdown
+{% if context.month_to_date.sport_breakdown %}
+{% for sport, metrics in context.month_to_date.sport_breakdown.items() %}
+- {{ sport }}: {{ metrics.activity_count }} activities, {{ metrics.distance_km }} km, {{ metrics.moving_time_hours }} h, load {{ metrics.load }}
+{% endfor %}
+{% else %}
+- No month-to-date activities are available.
+{% endif %}
+
+## Year-to-Date Breakdown
+{% if context.year_to_date.sport_breakdown %}
+{% for sport, metrics in context.year_to_date.sport_breakdown.items() %}
+- {{ sport }}: {{ metrics.activity_count }} activities, {{ metrics.distance_km }} km, {{ metrics.moving_time_hours }} h, load {{ metrics.load }}
+{% endfor %}
+{% else %}
+- No year-to-date activities are available.
+{% endif %}
+
+## Last 28 Days Zones
+{% if context.rolling_28_days.zone_totals %}
+{% for resource, zones in context.rolling_28_days.zone_totals.items() %}
+### {{ resource | capitalize }}
+{% for zone in zones %}
+- Zone {{ zone.zone_index }}: {{ zone.time_seconds }} seconds{% if zone.min_value is not none %}, min {{ zone.min_value }}{% endif %}{% if zone.max_value is not none %}, max {{ zone.max_value }}{% endif %}
+{% endfor %}
+{% endfor %}
+{% else %}
+- No zone totals are available for the last 28 days.
+{% endif %}
+

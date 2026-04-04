@@ -1,0 +1,5 @@
+{
+  "time": {"type": "time", "series_type": "time", "original_size": 12, "resolution": "low", "data": [0, 60, 120, 180, 240, 300, 360, 420, 480, 540, 600, 660]},
+  "velocity_smooth": {"type": "velocity_smooth", "series_type": "distance", "original_size": 12, "resolution": "low", "data": [2.7, 2.8, 4.1, 4.2, 2.6, 2.7, 4.3, 4.4, 2.5, 2.6, 4.4, 4.5]},
+  "heartrate": {"type": "heartrate", "series_type": "distance", "original_size": 12, "resolution": "low", "data": [120, 128, 160, 165, 134, 136, 166, 168, 137, 139, 170, 172]}
+}

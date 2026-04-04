@@ -1,0 +1,5 @@
+{
+  "time": {"type": "time", "series_type": "time", "original_size": 8, "resolution": "low", "data": [0, 900, 1800, 2700, 3600, 4500, 5400, 6300]},
+  "watts": {"type": "watts", "series_type": "distance", "original_size": 8, "resolution": "low", "data": [170, 185, 195, 210, 205, 198, 190, 180]},
+  "heartrate": {"type": "heartrate", "series_type": "distance", "original_size": 8, "resolution": "low", "data": [132, 138, 140, 145, 146, 144, 143, 140]}
+}

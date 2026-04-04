@@ -1,0 +1,11 @@
+{
+  "aspect_type": "update",
+  "event_time": 1775313660,
+  "object_id": 1001,
+  "object_type": "activity",
+  "owner_id": 424242,
+  "subscription_id": 1,
+  "updates": {
+    "title": "Track Intervals Updated"
+  }
+}

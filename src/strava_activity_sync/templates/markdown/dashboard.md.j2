@@ -1,0 +1,45 @@
+# Training Dashboard
+
+Generated from deterministic Strava data exports. This file is the primary AI context entrypoint.
+
+## Snapshot
+
+- Last 7 days: {{ context.last_7_days.activity_count }} activities, {{ context.last_7_days.total_distance_km }} km, {{ context.last_7_days.total_moving_time_hours }} h, load {{ context.last_7_days.total_load }}
+- Current week: {{ context.current_week.activity_count }} activities, {{ context.current_week.total_distance_km }} km, load {{ context.current_week.total_load }}
+- Previous week: {{ context.previous_week.activity_count }} activities, {{ context.previous_week.total_distance_km }} km, load {{ context.previous_week.total_load }}
+- Month to date: {{ context.month_to_date.activity_count }} activities, {{ context.month_to_date.total_distance_km }} km, load {{ context.month_to_date.total_load }}
+- Year to date: {{ context.year_to_date.activity_count }} activities, {{ context.year_to_date.total_distance_km }} km, load {{ context.year_to_date.total_load }}
+
+## Load Flags
+{% if context.load_flags %}
+{% for flag in context.load_flags %}
+- {{ flag }}
+{% endfor %}
+{% else %}
+- No immediate load or recovery flags were triggered.
+{% endif %}
+
+## Notable Sessions
+{% if context.notable_sessions %}
+{% for insight in context.notable_sessions %}
+- {{ insight.activity.start_date.date().isoformat() }} | {{ insight.activity.sport_type }} | {{ insight.activity.name }} | {{ insight.activity.distance_kilometers }} km | {{ insight.activity.moving_time_minutes }} min | load {{ insight.load_score }} via {{ insight.load_source }}{% if insight.tags %} | tags: {{ insight.tags | join(", ") }}{% endif %}
+{% endfor %}
+{% else %}
+- No notable sessions are available yet.
+{% endif %}
+
+## Current Week Sport Breakdown
+{% if context.current_week.sport_breakdown %}
+{% for sport, metrics in context.current_week.sport_breakdown.items() %}
+- {{ sport }}: {{ metrics.activity_count }} activities, {{ metrics.distance_km }} km, {{ metrics.moving_time_hours }} h, load {{ metrics.load }}
+{% endfor %}
+{% else %}
+- No activities recorded this week.
+{% endif %}
+
+## References
+
+- Recent activity details: `recent_activities.md`
+- Load trends: `training_load.md`
+- Machine index: `activity_index.json`
+

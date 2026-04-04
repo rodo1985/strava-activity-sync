@@ -1,0 +1,22 @@
+{
+  "id": 1003,
+  "name": "Recovery Jog",
+  "sport_type": "Run",
+  "start_date": "2026-04-01T05:30:00Z",
+  "start_date_local": "2026-04-01T07:30:00+02:00",
+  "timezone": "(GMT+01:00) Europe/Madrid",
+  "distance": 4000.0,
+  "moving_time": 1800,
+  "elapsed_time": 1860,
+  "total_elevation_gain": 20.0,
+  "average_speed": 2.22,
+  "max_speed": 3.2,
+  "average_heartrate": 122.0,
+  "max_heartrate": 138.0,
+  "average_cadence": 76.0,
+  "max_cadence": 82.0,
+  "trainer": false,
+  "commute": false,
+  "manual": false,
+  "description": "Easy shakeout run."
+}

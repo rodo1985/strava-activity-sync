@@ -1,0 +1,4 @@
+{
+  "time": {"type": "time", "series_type": "time", "original_size": 6, "resolution": "low", "data": [0, 300, 600, 900, 1200, 1500]},
+  "heartrate": {"type": "heartrate", "series_type": "distance", "original_size": 6, "resolution": "low", "data": [118, 120, 122, 123, 124, 125]}
+}

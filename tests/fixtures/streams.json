@@ -1,0 +1,32 @@
+{
+  "time": {
+    "data": [0, 300, 600, 900, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600],
+    "series_type": "time",
+    "original_size": 13,
+    "resolution": "high"
+  },
+  "distance": {
+    "data": [0, 1000, 2000, 2900, 3800, 4700, 5600, 6500, 7400, 8300, 9200, 10600, 12000],
+    "series_type": "distance",
+    "original_size": 13,
+    "resolution": "high"
+  },
+  "heartrate": {
+    "data": [120, 132, 140, 167, 171, 145, 143, 169, 173, 147, 142, 139, 135],
+    "series_type": "distance",
+    "original_size": 13,
+    "resolution": "high"
+  },
+  "watts": {
+    "data": [150, 175, 180, 285, 300, 170, 165, 290, 305, 180, 175, 170, 160],
+    "series_type": "distance",
+    "original_size": 13,
+    "resolution": "high"
+  },
+  "velocity_smooth": {
+    "data": [2.8, 3.1, 3.2, 4.0, 4.1, 3.0, 2.9, 4.0, 4.1, 3.0, 3.0, 3.1, 3.2],
+    "series_type": "distance",
+    "original_size": 13,
+    "resolution": "high"
+  }
+}

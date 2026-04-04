@@ -1,0 +1,10 @@
+[
+  {
+    "type": "heartrate",
+    "distribution_buckets": [
+      {"min": 100, "max": 130, "time": 600, "percent_time": 18.2},
+      {"min": 130, "max": 155, "time": 900, "percent_time": 27.3},
+      {"min": 155, "max": 190, "time": 1800, "percent_time": 54.5}
+    ]
+  }
+]

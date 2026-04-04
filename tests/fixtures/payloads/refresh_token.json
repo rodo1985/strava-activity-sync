@@ -1,0 +1,10 @@
+{
+  "token_type": "Bearer",
+  "expires_at": 1893463200,
+  "expires_in": 21600,
+  "refresh_token": "refresh-token-2",
+  "access_token": "access-token-2",
+  "athlete": {
+    "id": 424242
+  }
+}

@@ -1,0 +1,49 @@
+# Activity Detail
+
+## Summary
+
+- Activity ID: {{ insight.activity.activity_id }}
+- Date: {{ insight.activity.start_date.isoformat() }}
+- Name: {{ insight.activity.name }}
+- Sport: {{ insight.activity.sport_type }}
+- Distance: {{ insight.activity.distance_kilometers }} km
+- Moving time: {{ insight.activity.moving_time_minutes }} min
+- Elapsed time: {{ insight.activity.elapsed_time_minutes }} min
+- Elevation gain: {{ insight.activity.total_elevation_gain_meters or 0 }} m
+- Average heart rate: {{ insight.activity.average_heartrate or "n/a" }}
+- Max heart rate: {{ insight.activity.max_heartrate or "n/a" }}
+- Average power: {{ insight.activity.average_watts or "n/a" }}
+- Weighted average power: {{ insight.activity.weighted_average_watts or "n/a" }}
+- Kilojoules: {{ insight.activity.kilojoules or "n/a" }}
+- Load: {{ insight.load_score }} via {{ insight.load_source }}
+- Tags: {{ insight.tags | join(", ") if insight.tags else "none" }}
+{% if insight.interval_summary %}
+- Interval note: {{ insight.interval_summary }}
+{% endif %}
+
+## Zones
+{% if insight.activity.zones %}
+{% for zone in insight.activity.zones %}
+- {{ zone.resource }} zone {{ zone.zone_index }}: {{ zone.time_seconds }} seconds{% if zone.min_value is not none %}, min {{ zone.min_value }}{% endif %}{% if zone.max_value is not none %}, max {{ zone.max_value }}{% endif %}
+{% endfor %}
+{% else %}
+- No zone data was available for this activity.
+{% endif %}
+
+## Laps
+{% if insight.activity.laps %}
+{% for lap in insight.activity.laps %}
+- Lap {{ lap.lap_index }}{% if lap.name %} ({{ lap.name }}){% endif %}: {{ lap.distance_meters }} m, {{ lap.moving_time_seconds }} s, avg HR {{ lap.average_heartrate or "n/a" }}, avg W {{ lap.average_watts or "n/a" }}
+{% endfor %}
+{% else %}
+- No lap data was available for this activity.
+{% endif %}
+
+## Streams
+{% if insight.activity.streams %}
+{% for key, stream in insight.activity.streams.items() %}
+- {{ key }}: {{ stream.data | length }} points
+{% endfor %}
+{% else %}
+- No streams were stored for this activity.
+{% endif %}

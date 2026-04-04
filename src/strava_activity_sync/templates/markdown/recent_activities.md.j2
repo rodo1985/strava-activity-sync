@@ -1,0 +1,26 @@
+# Recent Activities
+
+This file lists the last 14 days of synced activities with deterministic tags and load metrics.
+
+{% if context.last_14_days.activities %}
+{% for insight in context.last_14_days.activities %}
+## {{ insight.activity.start_date.date().isoformat() }} · {{ insight.activity.name }}
+
+- Sport: {{ insight.activity.sport_type }}
+- Distance: {{ insight.activity.distance_kilometers }} km
+- Moving time: {{ insight.activity.moving_time_minutes }} min
+- Elevation gain: {{ insight.activity.total_elevation_gain_meters or 0 }} m
+- Average heart rate: {{ insight.activity.average_heartrate or "n/a" }}
+- Average power: {{ insight.activity.average_watts or "n/a" }}
+- Load: {{ insight.load_score }} via {{ insight.load_source }}
+- Tags: {{ insight.tags | join(", ") if insight.tags else "none" }}
+- Detail file: `{{ detail_path_for(insight) }}`
+{% if insight.interval_summary %}
+- Interval note: {{ insight.interval_summary }}
+{% endif %}
+
+{% endfor %}
+{% else %}
+No activities were recorded in the last 14 days.
+{% endif %}
+
