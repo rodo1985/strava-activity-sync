@@ -10,7 +10,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppConfig(BaseSettings):
-    """Store all runtime configuration for the application."""
+    """Store all runtime configuration for the application.
+
+    Returns:
+        AppConfig: A populated settings object sourced from `.env` and defaults.
+
+    Example:
+        >>> settings = AppConfig()
+        >>> settings.sync_batch_size
+        32
+    """
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -32,35 +41,55 @@ class AppConfig(BaseSettings):
     database_path: Path = Field(default=Path("data/db/strava_activity_sync.sqlite3"))
     export_dir: Path = Field(default=Path("data/exports"))
     timezone: str = "Europe/Madrid"
-    sync_lookback_days: int = 365
-    reconciliation_interval_minutes: int = 360
-    reconcile_lookback_days: int = 30
+    sync_lookback_days: int = 30
+    reconciliation_interval_minutes: int = 16
+    reconcile_lookback_days: int = 14
+    sync_batch_size: int = 32
     strava_request_timeout_seconds: int = 30
     enable_drive_export: bool = False
     google_drive_folder_id: str = ""
     google_drive_service_account_json: str = ""
 
     def ensure_runtime_directories(self) -> None:
-        """Create directories needed by SQLite and export artifacts."""
+        """Create directories needed by SQLite and export artifacts.
+
+        Returns:
+            None: The directories are created in place when missing.
+
+        Raises:
+            OSError: Propagates filesystem errors when directories cannot be created.
+        """
 
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self.export_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def strava_api_base_url(self) -> str:
-        """Return the base URL for the Strava REST API."""
+        """Return the base URL for the Strava REST API.
+
+        Returns:
+            str: The shared Strava REST API base URL.
+        """
 
         return "https://www.strava.com/api/v3"
 
     @property
     def strava_oauth_base_url(self) -> str:
-        """Return the base URL for Strava OAuth flows."""
+        """Return the base URL for Strava OAuth flows.
+
+        Returns:
+            str: The shared Strava OAuth base URL.
+        """
 
         return "https://www.strava.com/oauth"
 
     @property
     def scope_list(self) -> list[str]:
-        """Parse the configured OAuth scopes into a list."""
+        """Parse the configured OAuth scopes into a list.
+
+        Returns:
+            list[str]: Individual non-empty OAuth scopes in configured order.
+        """
 
         return [scope.strip() for scope in self.strava_scopes.split(",") if scope.strip()]
 
@@ -70,6 +99,10 @@ Settings = AppConfig
 
 @lru_cache(maxsize=1)
 def get_settings() -> AppConfig:
-    """Return a cached settings instance for runtime entrypoints."""
+    """Return a cached settings instance for runtime entrypoints.
+
+    Returns:
+        AppConfig: The cached singleton settings object for the current process.
+    """
 
     return AppConfig()

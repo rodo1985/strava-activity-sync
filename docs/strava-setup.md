@@ -154,7 +154,7 @@ This means:
   - a real public domain, or
   - a tunnel such as ngrok or Cloudflare Tunnel
 
-If you are only running locally with no public URL, this project can still work using manual backfill and scheduled reconciliation, but Strava webhooks will not be deliverable.
+If you are only running locally with no public URL, this project can still work using manual backfill and the recent-first scheduled collector, but Strava webhooks will not be deliverable.
 
 ## 7. Recommended setup for local development
 
@@ -304,4 +304,3 @@ Quick summary:
   - you choose this based on the public URL where your app is reachable
 - `STRAVA_REDIRECT_URI`
   - you choose this based on the URL where your app handles OAuth callback
-

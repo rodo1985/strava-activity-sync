@@ -37,7 +37,14 @@ class AppServices:
 
 
 def build_services(settings: Settings | None = None) -> AppServices:
-    """Instantiate the service graph used by the application."""
+    """Instantiate the service graph used by the application.
+
+    Parameters:
+        settings: Optional prebuilt settings object for tests or custom entrypoints.
+
+    Returns:
+        AppServices: Fully wired service container used by HTTP and CLI commands.
+    """
 
     resolved_settings = settings or get_settings()
     resolved_settings.ensure_runtime_directories()
@@ -51,7 +58,12 @@ def build_services(settings: Settings | None = None) -> AppServices:
         else LocalFilesystemExporter(resolved_settings.export_dir)
     )
     render_service = RenderService(exporter, resolved_settings.timezone)
-    sync_service = SyncService(repository, strava_client, render_service)
+    sync_service = SyncService(
+        repository,
+        strava_client,
+        render_service,
+        sync_batch_size=resolved_settings.sync_batch_size,
+    )
     backfill_service = BackfillService(sync_service)
     scheduler = SchedulerService(
         sync_service,
@@ -71,7 +83,14 @@ def build_services(settings: Settings | None = None) -> AppServices:
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    """Create the FastAPI application for the service."""
+    """Create the FastAPI application for the service.
+
+    Parameters:
+        settings: Optional prebuilt settings object for tests or custom entrypoints.
+
+    Returns:
+        FastAPI: Configured application instance with shared services attached.
+    """
 
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
@@ -79,7 +98,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
-        """Start background jobs and attempt the initial backfill when appropriate."""
+        """Start background jobs and attempt the initial seed sync when appropriate.
+
+        Yields:
+            None: Control returns to FastAPI for the application lifetime.
+        """
 
         services.scheduler.start()
         services.sync_service.maybe_run_initial_backfill(services.settings.sync_lookback_days)
@@ -93,7 +116,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         build_auth_router(
             services.repository,
             services.strava_client,
-            services.backfill_service,
+            services.sync_service,
             services.settings.sync_lookback_days,
         )
     )

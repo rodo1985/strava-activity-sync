@@ -8,8 +8,9 @@ The project is designed for simple self-hosted environments such as a Raspberry 
 
 - Sync Strava activities for a single athlete via OAuth.
 - Use Strava webhooks as the primary trigger for create, update, and delete events.
-- Run scheduled reconciliation to catch missed webhook events and support local-only setups.
-- Backfill the last 365 days on first startup when the local DB is empty.
+- Run a recent-first collector every 16 minutes to catch missed webhook events and support local-only setups.
+- Seed the local database with a bounded trailing-window batch on first startup instead of an aggressive full-year backfill.
+- Grow older history gradually by pulling one historical summary page whenever the recent collector has nothing new to ingest.
 - Store normalized activity detail in SQLite, including activity zones, laps, streams, and raw payloads.
 - Generate deterministic exports:
   - `dashboard.md`
@@ -72,7 +73,7 @@ Configure the Strava app with:
   - `activity:read_all`
   - `profile:read_all`
 
-If you are running fully locally, you can still use the app without webhook delivery. In that case, rely on the reconciliation scheduler and manual CLI commands until you expose the service through a tunnel or reverse proxy.
+If you are running fully locally, you can still use the app without webhook delivery. In that case, rely on the recent-first scheduler and manual CLI commands until you expose the service through a tunnel or reverse proxy.
 
 For a step-by-step guide to obtaining `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_WEBHOOK_VERIFY_TOKEN`, and `STRAVA_WEBHOOK_CALLBACK_URL`, see [docs/strava-setup.md](/Users/REDONSX1/Documents/code/01 personal/strava-activity-sync/docs/strava-setup.md).
 
@@ -95,10 +96,10 @@ uv run strava-sync serve --host 0.0.0.0 --port 8000
 Run a one-time backfill:
 
 ```bash
-uv run strava-sync backfill --days 365
+uv run strava-sync backfill --days 30
 ```
 
-Run scheduled reconciliation manually:
+Run the recent-first collector manually:
 
 ```bash
 uv run strava-sync reconcile
@@ -145,6 +146,7 @@ All configuration lives in environment variables. Copy `.env.template` to `.env`
 - `SYNC_LOOKBACK_DAYS`
 - `RECONCILIATION_INTERVAL_MINUTES`
 - `RECONCILE_LOOKBACK_DAYS`
+- `SYNC_BATCH_SIZE`
 - `STRAVA_REQUEST_TIMEOUT_SECONDS`
 
 Optional placeholders are included for a future Google Drive exporter:
@@ -154,6 +156,14 @@ Optional placeholders are included for a future Google Drive exporter:
 - `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON`
 
 Secrets are never committed. Keep `.env` local and mount secrets through your deployment platform when self-hosting.
+
+Default sync behavior:
+
+- `SYNC_LOOKBACK_DAYS=30` seeds the first local sync from the trailing 30 days.
+- `RECONCILIATION_INTERVAL_MINUTES=16` runs the recent-first collector on a safe cadence for self-hosting.
+- `RECONCILE_LOOKBACK_DAYS=14` defines the recent window inspected before falling back to older history.
+- `SYNC_BATCH_SIZE=32` caps how many unknown activities a batch will fully hydrate.
+- Startup, manual backfill, and scheduled collection skip streams by default to stay under Strava read limits. Webhook-driven sync still fetches streams.
 
 ## Project Structure
 
@@ -186,6 +196,8 @@ Secrets are never committed. Keep `.env` local and mount secrets through your de
 - The rendering pipeline is deterministic by design. Do not add LLM calls to core sync or export generation.
 - Treat webhook events as hints. Always re-fetch the detailed activity before updating the local store.
 - SQLite is the source of truth. Markdown and JSON files are generated artifacts.
+- Startup and scheduled batch sync intentionally skip Strava streams to stay under the tighter read limits. Webhook-driven sync still fetches streams for richer activity detail.
+- The scheduler is recent-first: it checks the most recent trailing window first, then backfills one older page only when recent activity is already up to date.
 - Keep functions small, documented, and testable. This repo expects docstrings on all functions and classes.
 - Prefer fixture-driven tests. Do not rely on live Strava calls in CI or unit tests.
 

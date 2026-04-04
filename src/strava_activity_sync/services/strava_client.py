@@ -101,8 +101,23 @@ class StravaClient:
         after=None,
         before=None,
         per_page: int = 200,
+        max_pages: int | None = None,
     ) -> Iterable[dict[str, Any]]:
-        """Iterate through paginated athlete activities."""
+        """Iterate through paginated athlete activities.
+
+        Parameters:
+            access_token: Valid Strava access token for the athlete.
+            after: Optional lower time bound accepted by Strava.
+            before: Optional upper time bound accepted by Strava.
+            per_page: Maximum number of activity summaries per page request.
+            max_pages: Optional cap on the number of summary pages to inspect.
+
+        Returns:
+            Iterable[dict[str, Any]]: Activity summary payloads ordered by Strava.
+
+        Raises:
+            StravaClientError: Propagates API failures from `_request`.
+        """
 
         page = 1
         while True:
@@ -122,6 +137,8 @@ class StravaClient:
             for item in response:
                 yield item
             if len(response) < per_page:
+                break
+            if max_pages is not None and page >= max_pages:
                 break
             page += 1
 
@@ -195,4 +212,3 @@ class StravaClient:
             )
 
         return response.json()
-

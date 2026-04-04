@@ -46,14 +46,22 @@ sequenceDiagram
 - `FastAPI app`: OAuth endpoints, webhook verification, webhook intake, and health checks.
 - `Strava client`: Handles OAuth token exchange, token refresh, and Strava API calls.
 - `Sync service`: Fetches full activity detail and updates local storage.
-- `Backfill service`: Runs first-start and manual trailing-window backfills.
-- `Scheduler`: Runs periodic reconciliation to catch missed webhook events.
+- `Backfill service`: Runs bounded first-start and manual trailing-window backfills.
+- `Scheduler`: Runs a recent-first sync every 16 minutes, then spends idle cycles on one older history page.
 - `SQLite`: Source of truth for normalized activity data and sync state.
 - `Render service`: Deterministically renders `dashboard.md`, `recent_activities.md`, `training_load.md`, `activity_index.json`, and per-activity Markdown.
 - `Exporter`: Writes artifacts locally now and provides a future boundary for Drive sync.
 
+## Sync Strategy
+
+- `Initial seed`: On first successful auth, the app inspects the trailing 30 days and hydrates up to 32 unknown activities without streams.
+- `Webhook path`: New or updated Strava activities are fetched immediately with streams, zones, and laps so recent workouts have the richest detail.
+- `Scheduled path`: Every 16 minutes the app checks the recent 14-day window first. If nothing new appears there, the same cycle is spent on one older summary page so history grows gradually.
+- `Manual backfill`: The CLI backfill command uses the same bounded, stream-free strategy and can be run repeatedly to grow historical coverage without rate-limit spikes.
+
 ## Deployment Notes
 
 - v1 is optimized for a single container and bind-mounted storage.
-- Webhooks are the preferred trigger, but the service still works with reconciliation-only sync if webhook delivery is not reachable.
+- Webhooks are the preferred trigger, but the service still works with recent-first scheduled sync if webhook delivery is not reachable.
+- Startup and scheduled batches skip streams intentionally so self-hosted deployments can stay below Strava's tighter read limits.
 - The same codebase can run on a laptop, NAS, Raspberry Pi, or small VM without swapping infrastructure components.

@@ -1,4 +1,4 @@
-"""Background scheduler wiring for reconciliation jobs."""
+"""Background scheduler wiring for recent-first collection jobs."""
 
 from __future__ import annotations
 
@@ -13,7 +13,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SchedulerService:
-    """Owns the background reconciliation scheduler."""
+    """Own the background recent-first sync scheduler.
+
+    Parameters:
+        sync_service: Shared sync service used by scheduled jobs.
+        interval_minutes: Frequency for scheduled collection runs.
+        lookback_days: Recent window inspected before historical fallback begins.
+    """
 
     def __init__(self, sync_service: SyncService, interval_minutes: int, lookback_days: int) -> None:
         self.sync_service = sync_service
@@ -22,7 +28,11 @@ class SchedulerService:
         self.scheduler = BackgroundScheduler()
 
     def start(self) -> None:
-        """Start the scheduler if it is not already running."""
+        """Start the scheduler if it is not already running.
+
+        Returns:
+            None: The scheduler starts in the current process when needed.
+        """
 
         if self.scheduler.running:
             return
@@ -36,16 +46,23 @@ class SchedulerService:
         self.scheduler.start()
 
     def shutdown(self) -> None:
-        """Stop the scheduler if it is running."""
+        """Stop the scheduler if it is running.
+
+        Returns:
+            None: The scheduler is stopped in place when active.
+        """
 
         if self.scheduler.running:
             self.scheduler.shutdown(wait=False)
 
     def _run_reconciliation(self) -> None:
-        """Run reconciliation in the background and log failures cleanly."""
+        """Run the scheduled collection flow and log failures cleanly.
+
+        Returns:
+            None: Side effects are handled by the sync service and repository.
+        """
 
         try:
             self.sync_service.reconcile(lookback_days=self.lookback_days)
         except Exception:  # pragma: no cover - APScheduler swallows job exceptions.
-            LOGGER.exception("Scheduled reconciliation failed.")
-
+            LOGGER.exception("Scheduled recent-first collection failed.")

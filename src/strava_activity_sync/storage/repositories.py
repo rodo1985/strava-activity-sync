@@ -273,14 +273,25 @@ class StravaRepository:
             connection.commit()
 
     def is_empty(self) -> bool:
-        """Return whether the activity table is currently empty."""
+        """Return whether the activity table is currently empty.
+
+        Returns:
+            bool: `True` when no activity rows exist, otherwise `False`.
+        """
 
         with self.database.connect() as connection:
             row = connection.execute("SELECT COUNT(*) AS count FROM activities").fetchone()
         return int(row["count"]) == 0
 
     def list_activities(self, include_deleted: bool = False) -> list[ActivityRecord]:
-        """Load stored activities including nested zone, lap, and stream data."""
+        """Load stored activities including nested zone, lap, and stream data.
+
+        Parameters:
+            include_deleted: When `True`, include tombstoned activities.
+
+        Returns:
+            list[ActivityRecord]: Fully hydrated activity bundles ordered newest first.
+        """
 
         with self.database.connect() as connection:
             clause = "" if include_deleted else "WHERE deleted = 0"
@@ -379,7 +390,11 @@ class StravaRepository:
         return activities
 
     def get_latest_activity_start_date(self) -> datetime | None:
-        """Return the most recent activity start time stored in the database."""
+        """Return the most recent activity start time stored in the database.
+
+        Returns:
+            datetime | None: The latest non-deleted activity start timestamp, if any.
+        """
 
         with self.database.connect() as connection:
             row = connection.execute(
@@ -390,7 +405,15 @@ class StravaRepository:
         return datetime.fromisoformat(row["start_date"])
 
     def set_sync_state(self, key: str, value: dict[str, Any]) -> None:
-        """Persist a JSON sync-state blob."""
+        """Persist a JSON sync-state blob.
+
+        Parameters:
+            key: Logical sync-state key such as `initial_backfill`.
+            value: JSON-serializable state payload.
+
+        Returns:
+            None: The sync-state row is written in place.
+        """
 
         with self.database.connect() as connection:
             connection.execute(
@@ -406,7 +429,14 @@ class StravaRepository:
             connection.commit()
 
     def get_sync_state(self, key: str) -> dict[str, Any] | None:
-        """Return a JSON sync-state blob by key, if present."""
+        """Return a JSON sync-state blob by key, if present.
+
+        Parameters:
+            key: Logical sync-state key to load.
+
+        Returns:
+            dict[str, Any] | None: The decoded state payload, if present.
+        """
 
         with self.database.connect() as connection:
             row = connection.execute(
@@ -418,7 +448,15 @@ class StravaRepository:
         return json.loads(row["value_json"])
 
     def record_webhook_event(self, payload: dict[str, Any], outcome: str) -> None:
-        """Store a webhook payload for debugging and audit purposes."""
+        """Store a webhook payload for debugging and audit purposes.
+
+        Parameters:
+            payload: Raw webhook payload received from Strava.
+            outcome: Short label describing how the event was processed.
+
+        Returns:
+            None: The webhook event row is written in place.
+        """
 
         with self.database.connect() as connection:
             connection.execute(
@@ -433,3 +471,39 @@ class StravaRepository:
                 ),
             )
             connection.commit()
+
+    def activity_exists(self, activity_id: int) -> bool:
+        """Return whether an activity is already stored locally.
+
+        Parameters:
+            activity_id: Strava activity identifier to look up.
+
+        Returns:
+            bool: `True` when the activity already exists in SQLite.
+
+        Example:
+            >>> repository.activity_exists(12345)
+            False
+        """
+
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT 1 AS present FROM activities WHERE activity_id = ? LIMIT 1",
+                (activity_id,),
+            ).fetchone()
+        return row is not None
+
+    def get_oldest_activity_start_date(self) -> datetime | None:
+        """Return the oldest non-deleted activity start time stored locally.
+
+        Returns:
+            datetime | None: The oldest known activity timestamp, if any.
+        """
+
+        with self.database.connect() as connection:
+            row = connection.execute(
+                "SELECT start_date FROM activities WHERE deleted = 0 ORDER BY start_date ASC LIMIT 1"
+            ).fetchone()
+        if row is None:
+            return None
+        return datetime.fromisoformat(row["start_date"])
