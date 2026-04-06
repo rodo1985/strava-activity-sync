@@ -47,6 +47,7 @@ class AppConfig(BaseSettings):
     sync_batch_size: int = 32
     strava_request_timeout_seconds: int = 30
     strava_verify_ssl: bool = True
+    strava_ca_bundle_path: str = ""
     enable_drive_export: bool = False
     google_drive_folder_id: str = ""
     google_drive_service_account_json: str = ""

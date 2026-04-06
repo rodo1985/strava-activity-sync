@@ -165,6 +165,7 @@ All configuration lives in environment variables. Copy `.env.template` to `.env`
 - `SYNC_BATCH_SIZE`
 - `STRAVA_REQUEST_TIMEOUT_SECONDS`
 - `STRAVA_VERIFY_SSL`
+- `STRAVA_CA_BUNDLE_PATH`
 
 Optional placeholders are included for a future Google Drive exporter:
 
@@ -181,7 +182,9 @@ Default sync behavior:
 - `RECONCILE_LOOKBACK_DAYS=14` defines the recent window inspected before falling back to older history.
 - `SYNC_BATCH_SIZE=32` caps how many unknown activities a batch will fully hydrate.
 - Startup, manual backfill, and scheduled collection skip streams by default to stay under Strava read limits. Webhook-driven sync still fetches streams.
-- `STRAVA_VERIFY_SSL=true` keeps HTTPS verification enabled. If Docker runs behind an enterprise TLS proxy and Strava requests fail certificate validation, you can temporarily set it to `false` while you install the correct CA bundle in the container.
+- `STRAVA_VERIFY_SSL=true` keeps HTTPS verification enabled.
+- `STRAVA_CA_BUNDLE_PATH` can point to a custom PEM bundle inside the container when Strava traffic is intercepted by an enterprise or local TLS proxy.
+- If Docker runs behind a TLS-intercepting network and you do not yet have the proxy CA bundle mounted into the container, you can temporarily set `STRAVA_VERIFY_SSL=false` as a local fallback.
 - `/health` includes `last_sync_at`, `last_sync_phase`, and `last_startup_sync_at` so you can confirm Docker startup and recurring sync activity.
 
 ## Project Structure

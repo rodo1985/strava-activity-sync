@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlencode
 
@@ -208,7 +209,23 @@ class StravaClient:
         data: dict[str, Any] | None = None,
         authenticated: bool = True,
     ) -> Any:
-        """Send an HTTP request to Strava and return the parsed JSON body."""
+        """Send an HTTP request to Strava and return the parsed JSON body.
+
+        Parameters:
+            method: HTTP method used for the request.
+            url: Fully qualified Strava URL to call.
+            access_token: OAuth access token for authenticated requests.
+            params: Optional query parameters sent to Strava.
+            data: Optional form body used mainly for OAuth token exchange.
+            authenticated: Whether the request requires a bearer token.
+
+        Returns:
+            Any: Parsed JSON payload from the Strava response body.
+
+        Raises:
+            StravaClientError: Raised when authentication inputs are missing or
+                when the Strava API responds with an error status code.
+        """
 
         headers = {}
         if authenticated:
@@ -217,7 +234,7 @@ class StravaClient:
             headers["Authorization"] = f"Bearer {access_token}"
 
         timeout = self.settings.strava_request_timeout_seconds
-        with httpx.Client(timeout=timeout, verify=self.settings.strava_verify_ssl) as client:
+        with httpx.Client(timeout=timeout, verify=self._build_verify_config()) as client:
             response = client.request(method, url, headers=headers, params=params, data=data)
 
         if response.status_code >= 400:
@@ -227,3 +244,35 @@ class StravaClient:
             )
 
         return response.json()
+
+    def _build_verify_config(self) -> bool | str:
+        """Return the TLS verification mode for outgoing Strava requests.
+
+        Parameters:
+            None
+
+        Returns:
+            bool | str: `False` when SSL verification is intentionally disabled,
+                a CA bundle path when one is configured, or `True` to defer to
+                the platform trust store.
+
+        Raises:
+            StravaClientError: Raised when a CA bundle path is configured but
+                does not exist in the runtime environment.
+        """
+
+        if not self.settings.strava_verify_ssl:
+            return False
+
+        if self.settings.strava_ca_bundle_path:
+            ca_bundle_path = Path(self.settings.strava_ca_bundle_path)
+            if not ca_bundle_path.exists():
+                raise StravaClientError(
+                    "Configured STRAVA_CA_BUNDLE_PATH does not exist: "
+                    f"{self.settings.strava_ca_bundle_path}"
+                )
+            return str(ca_bundle_path)
+
+        # Default to the runtime trust store when SSL verification remains
+        # enabled and no explicit CA bundle was provided.
+        return True

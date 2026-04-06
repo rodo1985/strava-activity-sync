@@ -95,3 +95,27 @@ def test_iter_activities_paginate_until_empty(monkeypatch, settings: Settings) -
     assert activities == [{"id": 1}, {"id": 2}]
     assert fake_client.calls[0]["params"]["page"] == 1
     assert fake_client.calls[1]["params"]["page"] == 2
+
+
+def test_verify_config_uses_configured_ca_bundle(tmp_path, settings: Settings) -> None:
+    """The client should honor an explicit CA bundle path when configured."""
+
+    ca_bundle = tmp_path / "custom-ca.pem"
+    ca_bundle.write_text("dummy", encoding="utf-8")
+    settings.strava_verify_ssl = True
+    settings.strava_ca_bundle_path = str(ca_bundle)
+
+    client = StravaClient(settings)
+
+    assert client._build_verify_config() == str(ca_bundle)
+
+
+def test_verify_config_disables_tls_when_requested(settings: Settings) -> None:
+    """The client should return False when SSL verification is disabled."""
+
+    settings.strava_verify_ssl = False
+    settings.strava_ca_bundle_path = ""
+
+    client = StravaClient(settings)
+
+    assert client._build_verify_config() is False
