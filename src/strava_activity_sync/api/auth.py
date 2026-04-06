@@ -71,7 +71,7 @@ def build_auth_router(
             if repository.is_empty():
                 # Keep the first auth callback light enough for local development by
                 # using the same bounded seed logic as the app lifespan hook.
-                sync_service.maybe_run_initial_backfill(initial_backfill_days)
+                sync_service.run_startup_sync(initial_backfill_days)
             return {
                 "status": "connected",
                 "athlete_id": profile.athlete_id,

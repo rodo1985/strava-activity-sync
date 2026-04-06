@@ -54,7 +54,8 @@ sequenceDiagram
 
 ## Sync Strategy
 
-- `Initial seed`: On first successful auth, the app inspects the trailing 30 days and hydrates up to 32 unknown activities without streams.
+- `Startup sync`: On every application boot, the app immediately checks the trailing 30-day window and hydrates up to 32 unknown activities without streams.
+- `Initial seed`: On the first successful auth with an empty database, that same startup sync becomes the first local seed batch.
 - `Webhook path`: New or updated Strava activities are fetched immediately with streams, zones, and laps so recent workouts have the richest detail.
 - `Scheduled path`: Every 16 minutes the app checks the recent 14-day window first. If nothing new appears there, the same cycle is spent on one older summary page so history grows gradually.
 - `Manual backfill`: The CLI backfill command uses the same bounded, stream-free strategy and can be run repeatedly to grow historical coverage without rate-limit spikes.

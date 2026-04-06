@@ -22,13 +22,7 @@
 {% endif %}
 
 ## Zones
-{% if insight.activity.zones %}
-{% for zone in insight.activity.zones %}
-- {{ zone.resource }} zone {{ zone.zone_index }}: {{ zone.time_seconds }} seconds{% if zone.min_value is not none %}, min {{ zone.min_value }}{% endif %}{% if zone.max_value is not none %}, max {{ zone.max_value }}{% endif %}
-{% endfor %}
-{% else %}
-- No zone data was available for this activity.
-{% endif %}
+{{ format_activity_zones(insight) }}
 
 ## Laps
 {% if insight.activity.laps %}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 import logging
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -25,7 +26,10 @@ class SchedulerService:
         self.sync_service = sync_service
         self.interval_minutes = interval_minutes
         self.lookback_days = lookback_days
-        self.scheduler = BackgroundScheduler()
+        self.scheduler = BackgroundScheduler(
+            timezone=timezone.utc,
+            job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": 300},
+        )
 
     def start(self) -> None:
         """Start the scheduler if it is not already running.
@@ -36,14 +40,21 @@ class SchedulerService:
 
         if self.scheduler.running:
             return
+        next_run_time = datetime.now(timezone.utc) + timedelta(minutes=self.interval_minutes)
         self.scheduler.add_job(
             self._run_reconciliation,
             "interval",
             minutes=self.interval_minutes,
             id="reconciliation",
             replace_existing=True,
+            next_run_time=next_run_time,
         )
         self.scheduler.start()
+        LOGGER.info(
+            "Scheduled recurring recent-first sync every %s minutes. Next run at %s.",
+            self.interval_minutes,
+            next_run_time.isoformat(),
+        )
 
     def shutdown(self) -> None:
         """Stop the scheduler if it is running.
@@ -63,6 +74,14 @@ class SchedulerService:
         """
 
         try:
-            self.sync_service.reconcile(lookback_days=self.lookback_days)
+            LOGGER.info(
+                "Scheduled sync fired.",
+                extra={"lookback_days": self.lookback_days, "interval_minutes": self.interval_minutes},
+            )
+            result = self.sync_service.reconcile(lookback_days=self.lookback_days)
+            LOGGER.info(
+                "Scheduled sync finished with %s processed activities.",
+                len(result.processed_activity_ids),
+            )
         except Exception:  # pragma: no cover - APScheduler swallows job exceptions.
             LOGGER.exception("Scheduled recent-first collection failed.")

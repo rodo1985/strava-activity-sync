@@ -46,6 +46,7 @@ class AppConfig(BaseSettings):
     reconcile_lookback_days: int = 14
     sync_batch_size: int = 32
     strava_request_timeout_seconds: int = 30
+    strava_verify_ssl: bool = True
     enable_drive_export: bool = False
     google_drive_folder_id: str = ""
     google_drive_service_account_json: str = ""

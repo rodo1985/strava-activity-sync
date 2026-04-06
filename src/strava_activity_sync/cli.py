@@ -69,6 +69,37 @@ def render() -> None:
     typer.echo(json.dumps({"exported_paths": paths}, indent=2))
 
 
+@app.command("clean-exports")
+def clean_exports() -> None:
+    """Remove all currently generated Markdown and JSON exports.
+
+    Returns:
+        None: Prints the export directory that was cleaned.
+    """
+
+    services = build_services()
+    services.render_service.clean_exports()
+    typer.echo(json.dumps({"cleaned_export_dir": str(services.settings.export_dir)}, indent=2))
+
+
+@app.command("rebuild-exports")
+def rebuild_exports(clean_first: bool = typer.Option(True, help="Delete current exports before rendering them again.")) -> None:
+    """Regenerate all exports from SQLite, optionally after cleaning the export folder.
+
+    Parameters:
+        clean_first: When `True`, remove existing exports before rendering fresh ones.
+
+    Returns:
+        None: Prints the exported paths to stdout.
+    """
+
+    services = build_services()
+    if clean_first:
+        services.render_service.clean_exports()
+    paths = services.sync_service.render_exports()
+    typer.echo(json.dumps({"exported_paths": paths, "clean_first": clean_first}, indent=2))
+
+
 @app.command()
 def serve(
     host: str = typer.Option(None, help="Host interface to bind."),

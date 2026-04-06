@@ -223,6 +223,51 @@ class SyncService:
             backfill page so older history grows over time without a large burst.
         """
 
+        return self.run_recent_first_cycle(
+            lookback_days=lookback_days,
+            trigger="scheduled",
+        )
+
+    def run_startup_sync(self, lookback_days: int) -> SyncResult | None:
+        """Run the startup sync that executes whenever the application boots.
+
+        Parameters:
+            lookback_days: Number of trailing days to inspect during startup.
+
+        Returns:
+            SyncResult | None: Sync summary when tokens are available, otherwise `None`.
+
+        Notes:
+            Startup sync always checks for recent unknown activities immediately so a
+            container restart does not have to wait for the next 16-minute interval.
+        """
+
+        if self.repository.get_tokens() is None:
+            LOGGER.info("Skipping startup sync because no Strava tokens are stored yet.")
+            return None
+
+        return self.run_recent_first_cycle(
+            lookback_days=lookback_days,
+            trigger="startup",
+        )
+
+    def run_recent_first_cycle(self, *, lookback_days: int, trigger: str) -> SyncResult:
+        """Run one recent-first sync cycle and persist traceable sync metadata.
+
+        Parameters:
+            lookback_days: Number of trailing days to inspect for recent activities.
+            trigger: Short label describing why the cycle is running.
+
+        Returns:
+            SyncResult: Sync summary for the recent pass or historical fallback.
+        """
+
+        LOGGER.info(
+            "Starting %s sync cycle.",
+            trigger,
+            extra={"lookback_days": lookback_days, "batch_size": self.sync_batch_size},
+        )
+
         result = self.sync_recent_window(
             lookback_days=lookback_days,
             max_activities=self.sync_batch_size,
@@ -238,14 +283,26 @@ class SyncService:
             )
             phase = "historical" if result.processed_activity_ids else "idle"
 
-        self.repository.set_sync_state(
-            "reconciliation",
-            {
-                "lookback_days": lookback_days,
-                "run_at": datetime.now(timezone.utc).isoformat(),
+        state_payload = {
+            "trigger": trigger,
+            "lookback_days": lookback_days,
+            "run_at": datetime.now(timezone.utc).isoformat(),
+            "phase": phase,
+            "batch_size": self.sync_batch_size,
+            "processed_count": len(result.processed_activity_ids),
+            "processed_activity_ids": result.processed_activity_ids,
+        }
+        self.repository.set_sync_state("reconciliation", state_payload)
+        if trigger == "startup":
+            self.repository.set_sync_state("startup_sync", state_payload)
+
+        LOGGER.info(
+            "Completed %s sync cycle.",
+            trigger,
+            extra={
                 "phase": phase,
-                "batch_size": self.sync_batch_size,
                 "processed_count": len(result.processed_activity_ids),
+                "processed_activity_ids": result.processed_activity_ids,
             },
         )
         return result
@@ -411,7 +468,10 @@ class SyncService:
         if token_bundle.expires_at > now_ts + 120:
             return token_bundle
 
-        refreshed = self.strava_client.refresh_token(token_bundle.refresh_token)
+        refreshed = self.strava_client.refresh_token(
+            token_bundle.refresh_token,
+            athlete_id=token_bundle.athlete_id,
+        )
         self.repository.save_tokens(refreshed)
         return refreshed
 

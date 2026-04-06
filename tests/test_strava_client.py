@@ -68,7 +68,7 @@ def test_refresh_token_returns_bundle(monkeypatch, settings: Settings) -> None:
             )
         ]
     )
-    monkeypatch.setattr(httpx, "Client", lambda timeout: fake_client)
+    monkeypatch.setattr(httpx, "Client", lambda *args, **kwargs: fake_client)
 
     client = StravaClient(settings)
     bundle = client.refresh_token("old-refresh-token")
@@ -87,7 +87,7 @@ def test_iter_activities_paginate_until_empty(monkeypatch, settings: Settings) -
             FakeResponse(200, []),
         ]
     )
-    monkeypatch.setattr(httpx, "Client", lambda timeout: fake_client)
+    monkeypatch.setattr(httpx, "Client", lambda *args, **kwargs: fake_client)
 
     client = StravaClient(settings)
     activities = list(client.iter_activities("token", per_page=2))

@@ -9,6 +9,7 @@ The project is designed for simple self-hosted environments such as a Raspberry 
 - Sync Strava activities for a single athlete via OAuth.
 - Use Strava webhooks as the primary trigger for create, update, and delete events.
 - Run a recent-first collector every 16 minutes to catch missed webhook events and support local-only setups.
+- Run a recent-first startup sync on every container boot, then continue recurring sync every 16 minutes.
 - Seed the local database with a bounded trailing-window batch on first startup instead of an aggressive full-year backfill.
 - Grow older history gradually by pulling one historical summary page whenever the recent collector has nothing new to ingest.
 - Store normalized activity detail in SQLite, including activity zones, laps, streams, and raw payloads.
@@ -111,6 +112,18 @@ Regenerate all exports from local storage:
 uv run strava-sync render
 ```
 
+Remove all generated exports:
+
+```bash
+uv run strava-sync clean-exports
+```
+
+Clean the export directory and rebuild everything from SQLite:
+
+```bash
+uv run strava-sync rebuild-exports
+```
+
 Run the test suite:
 
 ```bash
@@ -148,6 +161,7 @@ All configuration lives in environment variables. Copy `.env.template` to `.env`
 - `RECONCILE_LOOKBACK_DAYS`
 - `SYNC_BATCH_SIZE`
 - `STRAVA_REQUEST_TIMEOUT_SECONDS`
+- `STRAVA_VERIFY_SSL`
 
 Optional placeholders are included for a future Google Drive exporter:
 
@@ -159,11 +173,13 @@ Secrets are never committed. Keep `.env` local and mount secrets through your de
 
 Default sync behavior:
 
-- `SYNC_LOOKBACK_DAYS=30` seeds the first local sync from the trailing 30 days.
+- `SYNC_LOOKBACK_DAYS=30` defines the trailing window used by startup sync and first-run seeding.
 - `RECONCILIATION_INTERVAL_MINUTES=16` runs the recent-first collector on a safe cadence for self-hosting.
 - `RECONCILE_LOOKBACK_DAYS=14` defines the recent window inspected before falling back to older history.
 - `SYNC_BATCH_SIZE=32` caps how many unknown activities a batch will fully hydrate.
 - Startup, manual backfill, and scheduled collection skip streams by default to stay under Strava read limits. Webhook-driven sync still fetches streams.
+- `STRAVA_VERIFY_SSL=true` keeps HTTPS verification enabled. If Docker runs behind an enterprise TLS proxy and Strava requests fail certificate validation, you can temporarily set it to `false` while you install the correct CA bundle in the container.
+- `/health` includes `last_sync_at`, `last_sync_phase`, and `last_startup_sync_at` so you can confirm Docker startup and recurring sync activity.
 
 ## Project Structure
 
@@ -198,6 +214,7 @@ Default sync behavior:
 - SQLite is the source of truth. Markdown and JSON files are generated artifacts.
 - Startup and scheduled batch sync intentionally skip Strava streams to stay under the tighter read limits. Webhook-driven sync still fetches streams for richer activity detail.
 - The scheduler is recent-first: it checks the most recent trailing window first, then backfills one older page only when recent activity is already up to date.
+- Container startup always runs one immediate recent-first sync check when tokens are available, so a restart does not wait 16 minutes before looking for new activities.
 - Keep functions small, documented, and testable. This repo expects docstrings on all functions and classes.
 - Prefer fixture-driven tests. Do not rely on live Strava calls in CI or unit tests.
 

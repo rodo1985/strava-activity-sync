@@ -63,8 +63,21 @@ class StravaClient:
             raw_payload=response,
         )
 
-    def refresh_token(self, refresh_token: str) -> OAuthTokenBundle:
-        """Refresh an expired Strava access token."""
+    def refresh_token(self, refresh_token: str, athlete_id: int | None = None) -> OAuthTokenBundle:
+        """Refresh an expired Strava access token.
+
+        Parameters:
+            refresh_token: Stored Strava refresh token.
+            athlete_id: Optional fallback athlete identifier when the refresh payload
+                omits the `athlete` object.
+
+        Returns:
+            OAuthTokenBundle: Refreshed token bundle for subsequent API calls.
+
+        Raises:
+            StravaClientError: Raised when the response does not include an athlete ID
+                and no fallback athlete ID was provided.
+        """
 
         payload = {
             "client_id": self.settings.strava_client_id,
@@ -73,9 +86,11 @@ class StravaClient:
             "grant_type": "refresh_token",
         }
         response = self._request("POST", self.TOKEN_URL, data=payload, authenticated=False)
-        athlete_id = int(response["athlete"]["id"])
+        refreshed_athlete_id = response.get("athlete", {}).get("id", athlete_id)
+        if refreshed_athlete_id is None:
+            raise StravaClientError("Strava token refresh response did not include an athlete identifier.")
         return OAuthTokenBundle(
-            athlete_id=athlete_id,
+            athlete_id=int(refreshed_athlete_id),
             access_token=response["access_token"],
             refresh_token=response["refresh_token"],
             expires_at=int(response["expires_at"]),
@@ -202,7 +217,7 @@ class StravaClient:
             headers["Authorization"] = f"Bearer {access_token}"
 
         timeout = self.settings.strava_request_timeout_seconds
-        with httpx.Client(timeout=timeout) as client:
+        with httpx.Client(timeout=timeout, verify=self.settings.strava_verify_ssl) as client:
             response = client.request(method, url, headers=headers, params=params, data=data)
 
         if response.status_code >= 400:

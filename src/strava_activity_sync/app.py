@@ -5,6 +5,9 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 
+import logging
+from threading import Thread
+
 from fastapi import FastAPI
 
 from strava_activity_sync.api.auth import build_auth_router
@@ -22,6 +25,9 @@ from strava_activity_sync.storage.db import Database
 from strava_activity_sync.storage.repositories import StravaRepository
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 @dataclass(slots=True)
 class AppServices:
     """Service container shared by FastAPI and CLI entrypoints."""
@@ -34,6 +40,23 @@ class AppServices:
     sync_service: SyncService
     backfill_service: BackfillService
     scheduler: SchedulerService
+
+
+def _run_startup_sync_safely(sync_service: SyncService, lookback_days: int) -> None:
+    """Run startup sync in a background thread without crashing the API process.
+
+    Parameters:
+        sync_service: Sync service used to perform the startup collection.
+        lookback_days: Trailing window used for the initial recent-first pass.
+
+    Returns:
+        None: The sync runs for its side effects and logs failures instead of raising.
+    """
+
+    try:
+        sync_service.run_startup_sync(lookback_days)
+    except Exception:
+        LOGGER.exception("Startup sync failed; the API will continue serving and retry on schedule.")
 
 
 def build_services(settings: Settings | None = None) -> AppServices:
@@ -105,7 +128,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """
 
         services.scheduler.start()
-        services.sync_service.maybe_run_initial_backfill(services.settings.sync_lookback_days)
+        # Startup sync should improve freshness, but it should never prevent the API
+        # from serving health checks or later scheduled retries.
+        startup_thread = Thread(
+            target=_run_startup_sync_safely,
+            args=(services.sync_service, services.settings.sync_lookback_days),
+            name="startup-sync",
+            daemon=True,
+        )
+        startup_thread.start()
         yield
         services.scheduler.shutdown()
 

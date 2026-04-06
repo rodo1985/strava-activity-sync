@@ -8,7 +8,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from strava_activity_sync.domain.load_metrics import RenderContext, build_render_context
-from strava_activity_sync.domain.models import ActivityInsight, ActivityRecord
+from strava_activity_sync.domain.models import ActivityInsight, ActivityRecord, ActivityZone
 from strava_activity_sync.services.exporters import ExportBundle, Exporter, RenderedFile
 
 
@@ -31,6 +31,15 @@ class RenderService:
 
         bundle = self.build_bundle(activities)
         return self.exporter.export(bundle)
+
+    def clean_exports(self) -> None:
+        """Remove the current exported artifact set from the configured exporter.
+
+        Returns:
+            None: Existing export files are removed from the destination.
+        """
+
+        self.exporter.clean()
 
     def build_bundle(self, activities: list[ActivityRecord]) -> ExportBundle:
         """Build the full export bundle without writing any files."""
@@ -72,6 +81,7 @@ class RenderService:
             context=context,
             insight=insight,
             detail_path_for=self._detail_relative_path,
+            format_activity_zones=self._format_activity_zones,
         )
         return rendered.rstrip() + "\n"
 
@@ -107,3 +117,67 @@ class RenderService:
             f"{date_part}--{slug}--{activity.activity_id}.md"
         )
 
+    def _format_activity_zones(self, insight: ActivityInsight) -> str:
+        """Return a stable Markdown block for grouped activity zone details.
+
+        Parameters:
+            insight: Activity insight containing the raw zone rows to render.
+
+        Returns:
+            str: Markdown body for the activity's zone section.
+        """
+
+        if not insight.activity.zones:
+            return "- No zone data was available for this activity."
+
+        grouped_zones: dict[str, list[ActivityZone]] = {
+            "heartrate": [zone for zone in insight.activity.zones if zone.resource == "heartrate"],
+            "power": [zone for zone in insight.activity.zones if zone.resource == "power"],
+        }
+        other_resources = sorted(
+            {
+                zone.resource
+                for zone in insight.activity.zones
+                if zone.resource not in {"heartrate", "power"}
+            }
+        )
+
+        lines: list[str] = []
+        if grouped_zones["heartrate"]:
+            lines.append("### Heartrate Zone")
+            lines.extend(self._format_zone_lines(grouped_zones["heartrate"]))
+
+        if grouped_zones["power"]:
+            if lines:
+                lines.append("")
+            lines.append("### Power Zone")
+            lines.extend(self._format_zone_lines(grouped_zones["power"]))
+
+        for resource in other_resources:
+            resource_zones = [zone for zone in insight.activity.zones if zone.resource == resource]
+            if lines:
+                lines.append("")
+            lines.append(f"### {resource.replace('_', ' ').title()} Zone")
+            lines.extend(self._format_zone_lines(resource_zones))
+
+        return "\n".join(lines)
+
+    def _format_zone_lines(self, zones: list[ActivityZone]) -> list[str]:
+        """Format a set of same-resource zones as bullet lines.
+
+        Parameters:
+            zones: Zone rows sharing the same Strava resource type.
+
+        Returns:
+            list[str]: Markdown bullet lines for each zone.
+        """
+
+        lines: list[str] = []
+        for zone in zones:
+            line = f"- {zone.resource} zone {zone.zone_index}: {zone.time_seconds} seconds"
+            if zone.min_value is not None:
+                line += f", min {zone.min_value}"
+            if zone.max_value is not None:
+                line += f", max {zone.max_value}"
+            lines.append(line)
+        return lines

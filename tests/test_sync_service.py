@@ -31,16 +31,18 @@ class FakeStravaClient:
         self.refresh_called = False
         self.stream_call_ids: list[int] = []
 
-    def refresh_token(self, refresh_token: str) -> OAuthTokenBundle:
+    def refresh_token(self, refresh_token: str, athlete_id: int | None = None) -> OAuthTokenBundle:
         """Return a refreshed token bundle for tests.
 
         Parameters:
             refresh_token: Refresh token passed by the sync service.
+            athlete_id: Optional fallback athlete identifier.
 
         Returns:
             OAuthTokenBundle: Refreshed token payload for follow-up calls.
         """
 
+        del athlete_id
         self.refresh_called = True
         return OAuthTokenBundle(
             athlete_id=101,
@@ -355,6 +357,38 @@ def test_reconciliation_falls_back_to_historical_when_recent_window_is_idle(repo
     assert repository.get_sync_state("reconciliation")["phase"] == "historical"
 
 
+def test_startup_sync_checks_recent_window_even_when_database_is_not_empty(repository, render_service) -> None:
+    """Startup sync should still look for recent unknown activities after a restart."""
+
+    fake_client = FakeStravaClient()
+    fake_client.details[24680] = deepcopy(load_fixture("activity_detail_second.json"))
+    fake_client.details[24680]["id"] = 24680
+    fake_client.details[24680]["name"] = "Fresh Recovery Ride"
+    fake_client.details[24680]["sport_type"] = "Ride"
+    fake_client.details[24680]["start_date"] = "2026-04-05T07:15:00Z"
+    fake_client.details[24680]["athlete"] = {"id": 101}
+    fake_client.activity_order = [24680, 12345, 67890]
+    repository.save_tokens(
+        OAuthTokenBundle(
+            athlete_id=101,
+            access_token="access-token",
+            refresh_token="refresh-token",
+            expires_at=4_102_444_800,
+            scope="read,activity:read_all,profile:read_all",
+            raw_payload={},
+        )
+    )
+    service = SyncService(repository, fake_client, render_service)
+
+    service.sync_activity(12345, include_streams=False)
+    result = service.run_startup_sync(lookback_days=30)
+
+    assert result is not None
+    assert result.processed_activity_ids == [24680, 67890]
+    assert repository.get_sync_state("startup_sync")["trigger"] == "startup"
+    assert len(repository.list_activities()) == 3
+
+
 def test_app_webhook_routes(settings, monkeypatch) -> None:
     """The FastAPI app should accept webhook verification and delivery requests."""
 
@@ -402,9 +436,12 @@ def test_app_webhook_routes(settings, monkeypatch) -> None:
             "hub.verify_token": settings.strava_webhook_verify_token,
         },
     )
+    health_response = client.get("/health")
     post_response = client.post("/webhooks/strava", json=load_fixture("webhook_create.json"))
 
     assert verify_response.status_code == 200
     assert verify_response.json() == {"hub.challenge": "abc123"}
+    assert health_response.status_code == 200
+    assert "last_sync_at" in health_response.json()
     assert post_response.status_code == 200
     assert post_response.json()["processed_activity_ids"] == [12345]
