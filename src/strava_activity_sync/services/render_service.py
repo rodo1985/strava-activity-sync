@@ -109,6 +109,7 @@ class RenderService:
             insight=insight,
             detail_path_for=self._detail_relative_path,
             format_activity_zones=self._format_activity_zones,
+            format_notable_sessions=self._format_notable_sessions,
         )
         return rendered.rstrip() + "\n"
 
@@ -393,6 +394,45 @@ class RenderService:
             lines.extend(self._format_zone_lines(resource_zones))
 
         return "\n".join(lines)
+
+    def _format_notable_sessions(self, insights: list[ActivityInsight]) -> str:
+        """Return a stable Markdown block for the notable sessions section.
+
+        Parameters:
+            insights: The highest-signal activity insights selected for the
+                dashboard summary.
+
+        Returns:
+            str: Markdown bullet list for notable sessions, or a fallback line
+                when no notable sessions are available.
+        """
+
+        if not insights:
+            return "- No notable sessions are available yet."
+
+        return "\n".join(self._format_notable_session_line(insight) for insight in insights)
+
+    def _format_notable_session_line(self, insight: ActivityInsight) -> str:
+        """Format one notable activity insight as a dashboard bullet line.
+
+        Parameters:
+            insight: Activity insight chosen for the dashboard notable-sessions
+                section.
+
+        Returns:
+            str: One Markdown bullet line with compact session metadata.
+        """
+
+        activity = insight.activity
+        line = (
+            f"- {activity.start_date.date().isoformat()} | {activity.sport_type} | "
+            f"{activity.name} | {activity.distance_kilometers} km | "
+            f"{activity.moving_time_minutes} min | load {insight.load_score} "
+            f"via {insight.load_source}"
+        )
+        if insight.tags:
+            line += f" | tags: {', '.join(insight.tags)}"
+        return line
 
     def _format_zone_lines(self, zones: list[ActivityZone]) -> list[str]:
         """Format a set of same-resource zones as bullet lines.

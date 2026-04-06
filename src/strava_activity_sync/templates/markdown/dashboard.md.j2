@@ -20,13 +20,7 @@ Generated from deterministic Strava data exports. This file is the primary AI co
 {% endif %}
 
 ## Notable Sessions
-{% if context.notable_sessions %}
-{% for insight in context.notable_sessions %}
-- {{ insight.activity.start_date.date().isoformat() }} | {{ insight.activity.sport_type }} | {{ insight.activity.name }} | {{ insight.activity.distance_kilometers }} km | {{ insight.activity.moving_time_minutes }} min | load {{ insight.load_score }} via {{ insight.load_source }}{% if insight.tags %} | tags: {{ insight.tags | join(", ") }}{% endif %}
-{% endfor %}
-{% else %}
-- No notable sessions are available yet.
-{% endif %}
+{{ format_notable_sessions(context.notable_sessions) }}
 
 ## Current Week Sport Breakdown
 {% if context.current_week.sport_breakdown %}
@@ -42,4 +36,3 @@ Generated from deterministic Strava data exports. This file is the primary AI co
 - Recent activity details: `recent_activities.md`
 - Load trends: `training_load.md`
 - Machine index: `activity_index.json`
-
