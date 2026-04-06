@@ -52,7 +52,9 @@ def build_render_context(
     """Build a deterministic rendering context from stored activities."""
 
     tz = ZoneInfo(timezone_name)
-    current_time = now.astimezone(tz) if now else datetime.now(tz)
+    # Normalize away sub-second noise so repeated renders with the same source
+    # data remain byte-stable for tests and downstream consumers.
+    current_time = (now.astimezone(tz) if now else datetime.now(tz)).replace(microsecond=0)
     active_activities = sorted(
         [activity for activity in activities if not activity.deleted],
         key=lambda item: item.start_date,

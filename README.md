@@ -15,8 +15,11 @@ The project is designed for simple self-hosted environments such as a Raspberry 
 - Store normalized activity detail in SQLite, including activity zones, laps, streams, and raw payloads.
 - Generate deterministic exports:
   - `dashboard.md`
+  - `dashboard.json`
   - `recent_activities.md`
+  - `recent_activities.json`
   - `training_load.md`
+  - `training_load.json`
   - `activity_index.json`
   - `activities/<year>/<date>--<sport>--<activity_id>.md`
 - Provide CLI commands for backfill, reconciliation, render, and local serving.
@@ -206,6 +209,13 @@ Default sync behavior:
 ├─ docker-compose.yml
 └─ pyproject.toml
 ```
+
+## Related Documentation
+
+- [Architecture](/Users/REDONSX1/Documents/code/01 personal/strava-activity-sync/docs/architecture.md)
+- [Shared Context Architecture](/Users/REDONSX1/Documents/code/01 personal/strava-activity-sync/docs/shared-context.md)
+- [Strava Shared Context Contract](/Users/REDONSX1/Documents/code/01 personal/strava-activity-sync/docs/strava-context.md)
+- [Strava Setup](/Users/REDONSX1/Documents/code/01 personal/strava-activity-sync/docs/strava-setup.md)
 
 ## Development Notes
 

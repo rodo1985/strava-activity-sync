@@ -36,6 +36,22 @@ def test_rendering_is_deterministic(render_service) -> None:
     parsed = json.loads(json_file.content)
     assert parsed[0]["activity_id"] in {12345, 67890}
 
+    dashboard_json_file = next(
+        file for file in first_bundle.files if file.relative_path.name == "dashboard.json"
+    )
+    recent_json_file = next(
+        file for file in first_bundle.files if file.relative_path.name == "recent_activities.json"
+    )
+    training_load_json_file = next(
+        file for file in first_bundle.files if file.relative_path.name == "training_load.json"
+    )
+    dashboard_payload = json.loads(dashboard_json_file.content)
+    recent_payload = json.loads(recent_json_file.content)
+    training_load_payload = json.loads(training_load_json_file.content)
+    assert "last_7_days" in dashboard_payload
+    assert "activities" in recent_payload
+    assert "rolling_28_days" in training_load_payload
+
     detail_file = next(file for file in first_bundle.files if file.relative_path.name.endswith(".md") and "activities/" in str(file.relative_path))
     assert "## Zones" in detail_file.content
     assert "### Heartrate Zone" in detail_file.content
