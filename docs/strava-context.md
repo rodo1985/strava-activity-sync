@@ -4,11 +4,11 @@
 
 This document defines the Strava-specific shared-context contract for this repo.
 
-It applies the broader shared-context strategy in a focused way: the Strava service owns its private SQLite database, then publishes deterministic Markdown and JSON artifacts for other local services and AI agents.
+It applies the broader shared-context strategy in a focused way: the Strava service owns its private storage backend, then publishes deterministic Markdown and JSON artifacts for other local services and AI agents.
 
 ## Why This Exists
 
-The Strava service should not share its SQLite database directly with other microservices or agents.
+The Strava service should not share its private storage backend directly with other microservices or agents.
 
 Instead, it should publish stable derived artifacts that are:
 
@@ -23,7 +23,7 @@ This keeps Strava as a bounded training-data service while still making its cont
 
 The Strava source of truth remains:
 
-- SQLite activity records
+- activity records stored in the configured repository backend
 - zones
 - laps
 - streams
@@ -36,7 +36,7 @@ The service then publishes:
 
 Rule:
 
-- SQLite is canonical for storage
+- the configured repository backend is canonical for storage
 - JSON is canonical for shared context exchange
 - Markdown is the readable companion representation
 
@@ -45,7 +45,7 @@ Rule:
 ```mermaid
 flowchart LR
     Strava["Strava API"] --> Sync["Strava Sync Service"]
-    Sync --> DB["Private SQLite DB"]
+    Sync --> DB["Private Strava Storage"]
     DB --> Render["Deterministic Render Service"]
     Render --> Shared["Shared Context Folder"]
     Shared --> Assistant["Main AI Assistant"]
@@ -73,13 +73,20 @@ Recommended shape:
         2026-04-05--ride--17984785574.md
 ```
 
-In this repo today, the equivalent publish location is the existing export directory, usually:
+In this repo today, the publish target depends on deployment mode:
+
+- local development:
+  - `data/exports/`
+- Vercel deployment:
+  - the configured Vercel Blob export prefix, such as `strava/exports/`
+
+For local development, the equivalent publish location is the existing export directory, usually:
 
 ```text
 data/exports/
 ```
 
-That export directory already acts like the Strava shared-context publish folder for local development and Docker usage.
+That export directory already acts like the Strava shared-context publish folder during local development.
 
 ## Export Contract
 
@@ -229,7 +236,7 @@ Other services should prefer the JSON files:
 - `training_load.json`
 - `activity_index.json`
 
-They should not query the Strava SQLite database directly.
+They should not query the Strava storage backend directly.
 
 ## Why Markdown and JSON Together
 
@@ -262,13 +269,13 @@ This repo implements the strategy by generating:
 - `activity_index.json`
 - activity detail Markdown files
 
-All of these are generated deterministically from SQLite-backed activity records using the render service.
+All of these are generated deterministically from repository-backed activity records using the render service.
 
 ## Non-goals
 
 This Strava shared-context contract does not require:
 
-- exposing SQLite tables to other services
+- exposing storage tables or state blobs to other services
 - an MCP server for local context sharing
 - live RPC for every assistant request
 - AI-generated report text in the export pipeline

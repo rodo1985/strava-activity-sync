@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/**/*.py": {
+      "excludeFiles": "{tests/**,data/**,docs/**}"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/reconcile",
+      "schedule": "0 5 * * *"
+    }
+  ]
+}

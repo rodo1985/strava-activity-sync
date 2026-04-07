@@ -9,14 +9,14 @@ from fastapi.responses import RedirectResponse
 
 from strava_activity_sync.services.strava_client import StravaClient, StravaClientError
 from strava_activity_sync.services.sync_service import SyncService
-from strava_activity_sync.storage.repositories import StravaRepository
+from strava_activity_sync.storage.repositories import StravaRepositoryProtocol
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 def build_auth_router(
-    repository: StravaRepository,
+    repository: StravaRepositoryProtocol,
     strava_client: StravaClient,
     sync_service: SyncService,
     initial_backfill_days: int,

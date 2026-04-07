@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from strava_activity_sync.storage.repositories import StravaRepository
+from strava_activity_sync.storage.repositories import StravaRepositoryProtocol
 
 
-def build_health_router(repository: StravaRepository) -> APIRouter:
+def build_health_router(repository: StravaRepositoryProtocol) -> APIRouter:
     """Build the health router for liveness and readiness checks.
 
     Parameters:

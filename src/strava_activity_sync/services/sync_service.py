@@ -15,9 +15,10 @@ from strava_activity_sync.domain.models import (
     ActivityZone,
     OAuthTokenBundle,
 )
+from strava_activity_sync.services.apex_supabase_projector import ApexSupabaseProjector
 from strava_activity_sync.services.render_service import RenderService
 from strava_activity_sync.services.strava_client import StravaClient, StravaClientError
-from strava_activity_sync.storage.repositories import StravaRepository
+from strava_activity_sync.storage.repositories import StravaRepositoryProtocol
 
 
 LOGGER = logging.getLogger(__name__)
@@ -44,6 +45,8 @@ class SyncService:
         strava_client: HTTP client wrapper for Strava endpoints.
         render_service: Deterministic renderer for Markdown and JSON exports.
         sync_batch_size: Default cap for batched sync operations.
+        apex_projector: Optional APEX Supabase projector used to mirror synced
+            activities into the user's existing daily-log schema.
 
     Example:
         >>> service = SyncService(repository, client, render_service, sync_batch_size=32)
@@ -53,15 +56,17 @@ class SyncService:
 
     def __init__(
         self,
-        repository: StravaRepository,
+        repository: StravaRepositoryProtocol,
         strava_client: StravaClient,
         render_service: RenderService,
         sync_batch_size: int = 32,
+        apex_projector: ApexSupabaseProjector | None = None,
     ) -> None:
         self.repository = repository
         self.strava_client = strava_client
         self.render_service = render_service
         self.sync_batch_size = max(1, sync_batch_size)
+        self.apex_projector = apex_projector
 
     def sync_activity(
         self,
@@ -239,7 +244,7 @@ class SyncService:
 
         Notes:
             Startup sync always checks for recent unknown activities immediately so a
-            container restart does not have to wait for the next 16-minute interval.
+            local process restart does not have to wait for the next 16-minute interval.
         """
 
         if self.repository.get_tokens() is None:
@@ -381,6 +386,8 @@ class SyncService:
 
         if event.aspect_type == "delete":
             self.repository.mark_activity_deleted(event.object_id)
+            if self.apex_projector is not None:
+                self.apex_projector.delete_activity(event.object_id)
             exported_paths = self._render_if_needed(render_after=True, processed_count=1)
             self.repository.record_webhook_event(payload, "deleted")
             return SyncResult(processed_activity_ids=[event.object_id], exported_paths=exported_paths)
@@ -434,6 +441,8 @@ class SyncService:
         )
         activity = build_activity_record(detail, zones, laps, streams)
         self.repository.upsert_activity_bundle(activity)
+        if self.apex_projector is not None:
+            self.apex_projector.project_activity(activity)
 
     def _render_if_needed(self, *, render_after: bool, processed_count: int) -> list[str]:
         """Render exports only when the caller requested it and data changed.

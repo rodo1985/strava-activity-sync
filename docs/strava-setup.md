@@ -63,7 +63,7 @@ Keep the client secret private. It should never be committed to Git.
 
 This is the OAuth callback used when you connect your Strava account to the app.
 
-In this project, the callback path is:
+In local development, the callback path is:
 
 ```text
 /auth/strava/callback
@@ -73,6 +73,8 @@ So your full redirect URI should look like one of these:
 
 - local:
   - `http://127.0.0.1:8000/auth/strava/callback`
+- Vercel:
+  - `https://your-project.vercel.app/api/auth/strava/callback`
 - public server:
   - `https://your-domain.com/auth/strava/callback`
 - tunnel:
@@ -123,7 +125,7 @@ STRAVA_WEBHOOK_VERIFY_TOKEN=your_random_verify_token
 
 `STRAVA_WEBHOOK_CALLBACK_URL` is the public URL that Strava will call for webhook verification and activity events.
 
-In this project, the webhook endpoint path is:
+In local development, the webhook endpoint path is:
 
 ```text
 /webhooks/strava
@@ -133,6 +135,8 @@ So the callback URL should look like:
 
 - local with tunnel:
   - `https://your-ngrok-subdomain.ngrok.app/webhooks/strava`
+- Vercel:
+  - `https://your-project.vercel.app/api/webhooks/strava`
 - public server:
   - `https://your-domain.com/webhooks/strava`
 
@@ -154,7 +158,7 @@ This means:
   - a real public domain, or
   - a tunnel such as ngrok or Cloudflare Tunnel
 
-If you are only running locally with no public URL, this project can still work using manual backfill and the recent-first scheduled collector, but Strava webhooks will not be deliverable.
+If you are only running locally with no public URL, this project can still work using manual backfill and the local scheduler, but Strava webhooks will not be deliverable.
 
 ## 7. Recommended setup for local development
 
@@ -184,6 +188,17 @@ Example:
   - `https://abc123.ngrok.app/auth/strava/callback`
 - webhook callback URL:
   - `https://abc123.ngrok.app/webhooks/strava`
+
+## 7b. Recommended setup for Vercel
+
+For a Vercel deployment, use:
+
+- app base URL:
+  - `https://your-project.vercel.app/api`
+- redirect URI:
+  - `https://your-project.vercel.app/api/auth/strava/callback`
+- webhook callback URL:
+  - `https://your-project.vercel.app/api/webhooks/strava`
 
 ## 8. Create the webhook subscription in Strava
 

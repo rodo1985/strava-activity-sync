@@ -11,18 +11,25 @@ from threading import Thread
 from fastapi import FastAPI
 
 from strava_activity_sync.api.auth import build_auth_router
+from strava_activity_sync.api.cron import build_cron_router
 from strava_activity_sync.api.health import build_health_router
 from strava_activity_sync.api.webhook import build_webhook_router
 from strava_activity_sync.config import Settings, get_settings
 from strava_activity_sync.logging import configure_logging
 from strava_activity_sync.scheduler.jobs import SchedulerService
 from strava_activity_sync.services.backfill_service import BackfillService
-from strava_activity_sync.services.exporters import GoogleDriveExporter, LocalFilesystemExporter
+from strava_activity_sync.services.apex_supabase_projector import ApexSupabaseProjector
+from strava_activity_sync.services.exporters import (
+    GoogleDriveExporter,
+    LocalFilesystemExporter,
+    VercelBlobExporter,
+)
 from strava_activity_sync.services.render_service import RenderService
 from strava_activity_sync.services.strava_client import StravaClient
 from strava_activity_sync.services.sync_service import SyncService
+from strava_activity_sync.storage.blob_repository import VercelBlobStravaRepository
 from strava_activity_sync.storage.db import Database
-from strava_activity_sync.storage.repositories import StravaRepository
+from strava_activity_sync.storage.repositories import StravaRepository, StravaRepositoryProtocol
 
 
 LOGGER = logging.getLogger(__name__)
@@ -33,13 +40,14 @@ class AppServices:
     """Service container shared by FastAPI and CLI entrypoints."""
 
     settings: Settings
-    database: Database
-    repository: StravaRepository
+    database: Database | None
+    repository: StravaRepositoryProtocol
     strava_client: StravaClient
     render_service: RenderService
     sync_service: SyncService
     backfill_service: BackfillService
     scheduler: SchedulerService
+    apex_projector: ApexSupabaseProjector | None
 
 
 def _run_startup_sync_safely(sync_service: SyncService, lookback_days: int) -> None:
@@ -71,21 +79,30 @@ def build_services(settings: Settings | None = None) -> AppServices:
 
     resolved_settings = settings or get_settings()
     resolved_settings.ensure_runtime_directories()
-    database = Database(resolved_settings.database_path)
-    database.initialize()
-    repository = StravaRepository(database)
+    database: Database | None = None
+    if resolved_settings.storage_backend == "vercel_blob":
+        repository: StravaRepositoryProtocol = VercelBlobStravaRepository(resolved_settings)
+    else:
+        database = Database(resolved_settings.database_path)
+        database.initialize()
+        repository = StravaRepository(database)
     strava_client = StravaClient(resolved_settings)
-    exporter = (
-        GoogleDriveExporter(resolved_settings)
-        if resolved_settings.enable_drive_export
-        else LocalFilesystemExporter(resolved_settings.export_dir)
-    )
+    if resolved_settings.enable_drive_export:
+        exporter = GoogleDriveExporter(resolved_settings)
+    elif resolved_settings.export_backend == "vercel_blob":
+        exporter = VercelBlobExporter(resolved_settings)
+    else:
+        exporter = LocalFilesystemExporter(resolved_settings.export_dir)
     render_service = RenderService(exporter, resolved_settings.timezone)
+    apex_projector = (
+        ApexSupabaseProjector(resolved_settings) if resolved_settings.has_apex_supabase_config else None
+    )
     sync_service = SyncService(
         repository,
         strava_client,
         render_service,
         sync_batch_size=resolved_settings.sync_batch_size,
+        apex_projector=apex_projector,
     )
     backfill_service = BackfillService(sync_service)
     scheduler = SchedulerService(
@@ -102,6 +119,7 @@ def build_services(settings: Settings | None = None) -> AppServices:
         sync_service=sync_service,
         backfill_service=backfill_service,
         scheduler=scheduler,
+        apex_projector=apex_projector,
     )
 
 
@@ -127,22 +145,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             None: Control returns to FastAPI for the application lifetime.
         """
 
-        services.scheduler.start()
-        # Startup sync should improve freshness, but it should never prevent the API
-        # from serving health checks or later scheduled retries.
-        startup_thread = Thread(
-            target=_run_startup_sync_safely,
-            args=(services.sync_service, services.settings.sync_lookback_days),
-            name="startup-sync",
-            daemon=True,
-        )
-        startup_thread.start()
+        if not services.settings.is_vercel:
+            services.scheduler.start()
+            # Startup sync should improve freshness, but it should never prevent the API
+            # from serving health checks or later scheduled retries.
+            startup_thread = Thread(
+                target=_run_startup_sync_safely,
+                args=(services.sync_service, services.settings.sync_lookback_days),
+                name="startup-sync",
+                daemon=True,
+            )
+            startup_thread.start()
         yield
-        services.scheduler.shutdown()
+        if not services.settings.is_vercel:
+            services.scheduler.shutdown()
 
     app = FastAPI(title="Strava Activity Sync", lifespan=lifespan)
     app.state.services = services
     app.include_router(build_health_router(services.repository))
+    app.include_router(
+        build_cron_router(
+            services.sync_service,
+            services.settings.cron_secret,
+            services.settings.reconcile_lookback_days,
+        )
+    )
     app.include_router(
         build_auth_router(
             services.repository,

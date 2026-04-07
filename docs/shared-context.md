@@ -4,13 +4,13 @@
 
 This document defines how the Strava service fits into a larger local-first AI system where multiple microservices and specialist agents publish context for a single assistant.
 
-The goal is to keep service ownership clear while making it easy for an AI assistant to consume the right context without coupling directly to every service database.
+The goal is to keep service ownership clear while making it easy for an AI assistant to consume the right context without coupling directly to every service storage backend.
 
 ## Core Principles
 
-- Each microservice owns its own database and internal schema.
-- No service reads another service's private SQLite database directly.
-- Shared context is published as generated artifacts in a common local folder.
+- Each microservice owns its own storage backend and internal schema.
+- No service reads another service's private storage backend directly.
+- Shared context is published as generated artifacts in a common shared location such as a local folder or object-store prefix.
 - JSON is the primary machine-to-machine exchange format.
 - Markdown is the readable companion format for humans and LLM context windows.
 - The "big" assistant should read assembled context, not raw normalized tables.
@@ -38,7 +38,7 @@ Instead:
 
 - Strava remains responsible for training data only.
 - Other services remain free to change their own storage schemas.
-- The shared folder becomes the interoperability layer.
+- The shared context layer becomes the interoperability boundary.
 - The assistant gets predictable, compact, inspectable context files.
 
 This is simpler than introducing MCP or direct DB sharing for a closed single-machine system.
@@ -47,9 +47,9 @@ This is simpler than introducing MCP or direct DB sharing for a closed single-ma
 
 The recommended integration pattern is:
 
-1. Each service stores canonical data in its own database.
+1. Each service stores canonical data in its own repository backend.
 2. Each service renders derived context artifacts into a shared local folder.
-3. A higher-level assembler or assistant reads those artifacts.
+3. A higher-level assembler or assistant reads those artifacts from the shared location.
 4. The assistant builds a user-specific context bundle before invoking the LLM.
 
 ```mermaid
@@ -73,7 +73,7 @@ flowchart LR
 
 ## Recommended Shared Folder Contract
 
-The shared folder should be readable by all local services that need context, but writable only by the owning service.
+The shared context location should be readable by all services that need context, but writable only by the owning service.
 
 Suggested layout:
 
@@ -145,7 +145,7 @@ Recommended Strava outputs:
 - `activity_index.json`
 - `activities/<year>/<date>--<sport>--<activity_id>.md`
 
-The Strava SQLite database remains private to the Strava service.
+The Strava storage backend remains private to the Strava service.
 
 ## Other Recommended Producers
 
@@ -209,7 +209,7 @@ This is a good place for lightweight synthesis that avoids forcing the main assi
 
 ## Main Assistant Integration
 
-The main assistant should not query each microservice database directly.
+The main assistant should not query each microservice storage backend directly.
 
 Instead, it should read from a context assembler that builds a user-specific bundle from the shared folder.
 

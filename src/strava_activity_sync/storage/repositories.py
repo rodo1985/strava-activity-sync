@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from abc import abstractmethod
 from datetime import datetime, timezone
 import json
-from typing import Any
+from typing import Any, Protocol
 
 from strava_activity_sync.domain.models import (
     ActivityLap,
@@ -15,6 +16,66 @@ from strava_activity_sync.domain.models import (
     OAuthTokenBundle,
 )
 from strava_activity_sync.storage.db import Database
+
+
+class StravaRepositoryProtocol(Protocol):
+    """Protocol shared by all Strava persistence backends."""
+
+    @abstractmethod
+    def save_athlete_profile(self, profile: AthleteProfile) -> None:
+        """Persist the single-athlete profile."""
+
+    @abstractmethod
+    def get_athlete_profile(self) -> AthleteProfile | None:
+        """Return the stored athlete profile when available."""
+
+    @abstractmethod
+    def save_tokens(self, tokens: OAuthTokenBundle) -> None:
+        """Persist the latest OAuth tokens."""
+
+    @abstractmethod
+    def get_tokens(self) -> OAuthTokenBundle | None:
+        """Return the stored OAuth token bundle when available."""
+
+    @abstractmethod
+    def upsert_activity_bundle(self, activity: ActivityRecord) -> None:
+        """Persist one full activity record with nested data."""
+
+    @abstractmethod
+    def mark_activity_deleted(self, activity_id: int) -> None:
+        """Tombstone an activity without erasing its historical record."""
+
+    @abstractmethod
+    def is_empty(self) -> bool:
+        """Return whether the repository currently has any activities."""
+
+    @abstractmethod
+    def list_activities(self, include_deleted: bool = False) -> list[ActivityRecord]:
+        """Return stored activities, optionally including tombstoned rows."""
+
+    @abstractmethod
+    def get_latest_activity_start_date(self) -> datetime | None:
+        """Return the most recent stored activity start time."""
+
+    @abstractmethod
+    def set_sync_state(self, key: str, value: dict[str, Any]) -> None:
+        """Persist a JSON sync-state payload."""
+
+    @abstractmethod
+    def get_sync_state(self, key: str) -> dict[str, Any] | None:
+        """Return a JSON sync-state payload by key."""
+
+    @abstractmethod
+    def record_webhook_event(self, payload: dict[str, Any], outcome: str) -> None:
+        """Store a webhook audit record."""
+
+    @abstractmethod
+    def activity_exists(self, activity_id: int) -> bool:
+        """Return whether an activity already exists in storage."""
+
+    @abstractmethod
+    def get_oldest_activity_start_date(self) -> datetime | None:
+        """Return the oldest stored non-deleted activity start time."""
 
 
 class StravaRepository:

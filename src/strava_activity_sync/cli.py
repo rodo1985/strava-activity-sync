@@ -58,7 +58,7 @@ def reconcile(lookback_days: int = typer.Option(14, min=1, help="Recent-window d
 
 @app.command()
 def render() -> None:
-    """Render Markdown and JSON artifacts from the local SQLite database.
+    """Render Markdown and JSON artifacts from the configured storage backend.
 
     Returns:
         None: Prints exported paths to stdout.
@@ -84,7 +84,7 @@ def clean_exports() -> None:
 
 @app.command("rebuild-exports")
 def rebuild_exports(clean_first: bool = typer.Option(True, help="Delete current exports before rendering them again.")) -> None:
-    """Regenerate all exports from SQLite, optionally after cleaning the export folder.
+    """Regenerate all exports from the configured repository backend.
 
     Parameters:
         clean_first: When `True`, remove existing exports before rendering fresh ones.
@@ -98,6 +98,44 @@ def rebuild_exports(clean_first: bool = typer.Option(True, help="Delete current 
         services.render_service.clean_exports()
     paths = services.sync_service.render_exports()
     typer.echo(json.dumps({"exported_paths": paths, "clean_first": clean_first}, indent=2))
+
+
+@app.command("project-apex")
+def project_apex(limit: int | None = typer.Option(None, min=1, help="Optional limit of recent activities to project.")) -> None:
+    """Project locally stored activities into the configured APEX Supabase schema.
+
+    Parameters:
+        limit: Optional cap on how many non-deleted recent activities to project.
+
+    Returns:
+        None: Prints a JSON summary to stdout.
+
+    Raises:
+        typer.Exit: Raised when Supabase projection is not configured.
+    """
+
+    services = build_services()
+    if services.apex_projector is None:
+        typer.echo(
+            json.dumps(
+                {
+                    "error": "APEX Supabase projection is not configured.",
+                    "required_env": [
+                        "APEX_SUPABASE_URL",
+                        "APEX_SUPABASE_SERVICE_ROLE_KEY",
+                        "APEX_SUPABASE_SCHEMA",
+                    ],
+                },
+                indent=2,
+            )
+        )
+        raise typer.Exit(code=1)
+
+    activities = [activity for activity in services.repository.list_activities() if not activity.deleted]
+    if limit is not None:
+        activities = activities[:limit]
+    projected_ids = services.apex_projector.project_activities(activities)
+    typer.echo(json.dumps({"projected_count": len(projected_ids), "projected_activity_ids": projected_ids}, indent=2))
 
 
 @app.command()

@@ -40,7 +40,7 @@ This repo is a local-first Strava synchronization service for a single athlete. 
 
 When parallelizing work, prefer this split:
 
-- Docs and infrastructure: `README.md`, `docs/architecture.md`, `Dockerfile`, `docker-compose.yml`, `.env.template`, `pyproject.toml`
+- Docs and infrastructure: `README.md`, `docs/architecture.md`, `vercel.json`, `.env.template`, `pyproject.toml`
 - Ingestion and storage: `api`, `storage`, `scheduler`, `strava_client`, `sync_service`, `backfill_service`, `app.py`, `cli.py`
 - Analytics and rendering: `domain`, `render_service`, `exporters`, `templates/markdown`
 - Tests and fixtures: `tests`

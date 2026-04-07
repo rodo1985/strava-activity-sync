@@ -2,7 +2,7 @@
 
 ## High-level Overview
 
-The application is a local-first backend service that keeps a normalized SQLite mirror of Strava activity data and renders deterministic artifacts for AI and automation consumers.
+The application is a FastAPI backend that can run locally or on Vercel. It keeps a normalized Strava mirror through a pluggable storage backend and renders deterministic artifacts for AI and automation consumers.
 
 ```mermaid
 flowchart LR
@@ -11,9 +11,9 @@ flowchart LR
     App --> Sync["Sync service"]
     Sync --> Client["Strava client"]
     Client --> Strava
-    Sync --> DB["SQLite"]
-    DB --> Render["Render service"]
-    Render --> Export["Local exporter"]
+    Sync --> Store["Storage backend"]
+    Store --> Render["Render service"]
+    Render --> Export["Export backend"]
     Export --> Files["Markdown / JSON artifacts"]
     Render -.future.-> Drive["Google Drive exporter (future)"]
 ```
@@ -26,7 +26,7 @@ sequenceDiagram
     participant Strava
     participant App as FastAPI app
     participant Sync as Sync service
-    participant DB as SQLite
+    participant DB as Storage backend
     participant Render as Render service
     participant Files as Exported files
 
@@ -43,26 +43,36 @@ sequenceDiagram
 
 ## Runtime Components
 
-- `FastAPI app`: OAuth endpoints, webhook verification, webhook intake, and health checks.
+- `FastAPI app`: OAuth endpoints, webhook verification, webhook intake, cron endpoint, and health checks.
 - `Strava client`: Handles OAuth token exchange, token refresh, and Strava API calls.
 - `Sync service`: Fetches full activity detail and updates local storage.
 - `Backfill service`: Runs bounded first-start and manual trailing-window backfills.
-- `Scheduler`: Runs a recent-first sync every 16 minutes, then spends idle cycles on one older history page.
-- `SQLite`: Source of truth for normalized activity data and sync state.
-- `Render service`: Deterministically renders `dashboard.md`, `recent_activities.md`, `training_load.md`, `activity_index.json`, and per-activity Markdown.
-- `Exporter`: Writes artifacts locally now and provides a future boundary for Drive sync.
+- `Scheduler`: Used only for local process deployments.
+- `Storage backend`:
+  - `SQLite` for local development
+  - `Vercel Blob` for Vercel deployments
+- `Render service`: Deterministically renders Markdown and JSON exports.
+- `Exporter`:
+  - local filesystem for local development
+  - Vercel Blob for Vercel deployments
+  - future Drive sync boundary
 
 ## Sync Strategy
 
-- `Startup sync`: On every application boot, the app immediately checks the trailing 30-day window and hydrates up to 32 unknown activities without streams.
-- `Initial seed`: On the first successful auth with an empty database, that same startup sync becomes the first local seed batch.
+- `Startup sync`: Used in local process deployments to immediately check the trailing 30-day window.
+- `Initial seed`: On the first successful auth with an empty repository, the app runs a bounded seed sync.
 - `Webhook path`: New or updated Strava activities are fetched immediately with streams, zones, and laps so recent workouts have the richest detail.
-- `Scheduled path`: Every 16 minutes the app checks the recent 14-day window first. If nothing new appears there, the same cycle is spent on one older summary page so history grows gradually.
+- `Scheduled path`:
+  - local deployments use the in-process 16-minute scheduler
+  - Vercel deployments use the `/api/cron/reconcile` endpoint configured in `vercel.json`
 - `Manual backfill`: The CLI backfill command uses the same bounded, stream-free strategy and can be run repeatedly to grow historical coverage without rate-limit spikes.
 
 ## Deployment Notes
 
-- v1 is optimized for a single container and bind-mounted storage.
-- Webhooks are the preferred trigger, but the service still works with recent-first scheduled sync if webhook delivery is not reachable.
-- Startup and scheduled batches skip streams intentionally so self-hosted deployments can stay below Strava's tighter read limits.
-- The same codebase can run on a laptop, NAS, Raspberry Pi, or small VM without swapping infrastructure components.
+- The primary deployment target is now Vercel.
+- Vercel should use:
+  - `api/index.py` as the FastAPI function entrypoint
+  - `vercel.json` for the scheduled reconciliation endpoint
+  - `Vercel Blob` for durable state and exported artifacts
+- Webhooks are the preferred freshness path. The cron job acts as reconciliation rather than the primary ingestion trigger.
+- Local development still supports SQLite and local files so the repo remains easy to run without cloud resources.
